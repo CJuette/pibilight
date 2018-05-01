@@ -1,0 +1,30 @@
+%YAML:1.0
+---
+camera_device: "/dev/video0"
+loopback_device: "/dev/video1"
+width: 720
+height: 576
+outWidth: 480
+outHeight: 272
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 2.7187321245747853e+02, 0., 3.5139727856824106e+02, 0.,
+       2.7187321245747853e+02, 2.7722662310110661e+02, 0., 0., 1. ]
+distortion_coefficients: !!opencv-matrix
+   rows: 5
+   cols: 1
+   dt: d
+   data: [ -4.6723584917022672e-02, -2.7897562667793589e-02,
+       -7.9373815190382729e-04, -1.0878436222435004e-03,
+       6.3419585189407679e-03 ]
+corner_points: !!opencv-matrix
+   rows: 4
+   cols: 2
+   dt: f
+#Top Left, Top Right, Bottom Left, Bottom Right
+   data: [ 270, 14,
+        483, 310,
+        153, 413,
+        545, 520 ]
