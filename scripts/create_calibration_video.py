@@ -100,7 +100,7 @@ if _display:
 tag_index = 9
 # Generate for all combinations where each channel has either 0,127 or 255
 
-vals = [0,64,128,192,255]
+vals = [0,128,255]
 colorlist = []
 
 progress = tqdm(total=len(vals)**3)
