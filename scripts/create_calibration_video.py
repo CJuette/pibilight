@@ -147,6 +147,10 @@ frame_duration = 3 # second
 _fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 _out = cv2.VideoWriter("pibilight_calib.mp4", _fourcc, framerate, (_width,_height))
 
+# Double duration for first image
+for i in range(int(framerate * frame_duration)):
+    _out.write(np.array(images[0]))
+
 for img in tqdm(images):
     for i in range(int(framerate * frame_duration)):
         _out.write(np.array(img))
