@@ -103,6 +103,9 @@ tag_index = 9
 vals = [0,64,128,192,255]
 colorlist = []
 
+progress = tqdm(total=len(vals)**3)
+progress.update()
+
 for R in vals:
     for G in vals:
         for B in vals:
@@ -131,7 +134,9 @@ for R in vals:
             if _display:
                 img.show()
 
-print(colorlist)
+            progress.update()
+
+# print(colorlist)
 
 # TODO: Output colorlist?
 
