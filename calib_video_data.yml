@@ -1,0 +1,54 @@
+- color: !!python/tuple [0, 0, 0]
+  tag: 9
+- color: !!python/tuple [0, 0, 128]
+  tag: 10
+- color: !!python/tuple [0, 0, 255]
+  tag: 11
+- color: !!python/tuple [0, 128, 0]
+  tag: 12
+- color: !!python/tuple [0, 128, 128]
+  tag: 13
+- color: !!python/tuple [0, 128, 255]
+  tag: 14
+- color: !!python/tuple [0, 255, 0]
+  tag: 15
+- color: !!python/tuple [0, 255, 128]
+  tag: 16
+- color: !!python/tuple [0, 255, 255]
+  tag: 17
+- color: !!python/tuple [128, 0, 0]
+  tag: 18
+- color: !!python/tuple [128, 0, 128]
+  tag: 19
+- color: !!python/tuple [128, 0, 255]
+  tag: 20
+- color: !!python/tuple [128, 128, 0]
+  tag: 21
+- color: !!python/tuple [128, 128, 128]
+  tag: 22
+- color: !!python/tuple [128, 128, 255]
+  tag: 23
+- color: !!python/tuple [128, 255, 0]
+  tag: 24
+- color: !!python/tuple [128, 255, 128]
+  tag: 25
+- color: !!python/tuple [128, 255, 255]
+  tag: 26
+- color: !!python/tuple [255, 0, 0]
+  tag: 27
+- color: !!python/tuple [255, 0, 128]
+  tag: 28
+- color: !!python/tuple [255, 0, 255]
+  tag: 29
+- color: !!python/tuple [255, 128, 0]
+  tag: 30
+- color: !!python/tuple [255, 128, 128]
+  tag: 31
+- color: !!python/tuple [255, 128, 255]
+  tag: 32
+- color: !!python/tuple [255, 255, 0]
+  tag: 33
+- color: !!python/tuple [255, 255, 128]
+  tag: 34
+- color: !!python/tuple [255, 255, 255]
+  tag: 35
