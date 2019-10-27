@@ -6,6 +6,9 @@
 
 import argparse
 from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+import cv2
+from tqdm import tqdm
 
 # =============================================================================
 # Some aux functions...
@@ -132,4 +135,15 @@ print(colorlist)
 
 # TODO: Output colorlist?
 
-# TODO: Write images to video
+print("Writing images to video...")
+
+framerate = 20.0
+frame_duration = 3 # second
+_fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+_out = cv2.VideoWriter("pibilight_calib.mp4", _fourcc, framerate, (_width,_height))
+
+for img in tqdm(images):
+    for i in range(int(framerate * frame_duration)):
+        _out.write(np.array(img))
+
+_out.release()
