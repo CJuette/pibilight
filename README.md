@@ -18,11 +18,9 @@ How this works is not that complicated - the code should suffice for now.
 
 ### How to build
 
-To build the software, the following dependencies need to be satisfied. For each of them, instructions on how to install them can be found online.
+To build the software, the following dependency needs to be satisfied.
 
 - OpenCV 3
-- libyuv
-- Linux
 
 Then building should be fairly straightforward. In the main directory:
 

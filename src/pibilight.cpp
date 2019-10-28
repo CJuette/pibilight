@@ -5,8 +5,6 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <libyuv.h>
-
 #include <linux/videodev2.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -28,7 +26,8 @@ int width = 720;
 int height = 480;
 int outWidth = 640;
 int outHeight = 360;
-size_t bufferSize = outWidth * outHeight * 2;
+constexpr int BYTES_PER_PIXEL_OUT = 4;
+size_t bufferSize = outWidth * outHeight * BYTES_PER_PIXEL_OUT;
 
 #define CONFIG_FILE "/home/pi/pibilight/config.yml"
 
@@ -42,7 +41,7 @@ Mat currentImage;
 Mat processedImage;
 Mat undistortedTemp;
 Mat bgraImg;
-Mat yuyvImg;
+Mat rgbaImg;
 
 Mat cameraMatrix, distortionCoefficients;
 
@@ -105,7 +104,7 @@ void loadConfig()
 		outHeight = (int)configFile["outHeight"];
 	}
 
-	bufferSize = outWidth * outHeight * 2;
+	bufferSize = outWidth * outHeight * BYTES_PER_PIXEL_OUT;
 
 	destinationPoints[0] = Point2f{0,0};
 	destinationPoints[1] = Point2f{(float)outWidth-1, 0};
@@ -194,10 +193,10 @@ void initOutput()
 	fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 	fmt.fmt.pix.width = outWidth;
 	fmt.fmt.pix.height = outHeight;
-	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB32;
 	fmt.fmt.pix.sizeimage = bufferSize;
 	fmt.fmt.pix.field = V4L2_FIELD_NONE;
-	fmt.fmt.pix.bytesperline = outWidth * 2;
+	fmt.fmt.pix.bytesperline = outWidth * BYTES_PER_PIXEL_OUT;
 	fmt.fmt.pix.colorspace = V4L2_COLORSPACE_SMPTE170M;
 
 	if (-1 == ioctl(outputFD, VIDIOC_S_FMT, &fmt))
@@ -212,19 +211,19 @@ void initOutput()
 
 void outputImage()
 {
-	//Convert to YUYV
-  	cvtColor(processedImage, bgraImg, CV_BGR2BGRA);
+	//Convert to RGBA
 
-	if(yuyvImg.empty())
+	if(rgbaImg.empty())
 	{
-		yuyvImg.create(bgraImg.rows, bgraImg.cols, CV_8UC2);
+		rgbaImg.create(bgraImg.rows, bgraImg.cols, CV_8UC4);
 	}
 
-	int res = libyuv::ARGBToYUY2(bgraImg.data, bgraImg.cols*4, yuyvImg.data, outWidth * 2, bgraImg.cols, bgraImg.rows);
+	cvtColor(processedImage, rgbaImg, CV_BGR2RGBA);
 
-	if(write(outputFD, yuyvImg.ptr(), bufferSize) == -1)
+	logLine("Writing to output");
+	if(write(outputFD, rgbaImg.ptr(), bufferSize) <= 0)
 	{
-		throw("Write to output");
+		throw("Write to output failed");
 		return;
 	}
 }
