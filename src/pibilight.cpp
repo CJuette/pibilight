@@ -32,6 +32,7 @@ size_t bufferSize = outWidth * outHeight * BYTES_PER_PIXEL_OUT;
 #define CONFIG_FILE "/home/pi/pibilight/config.yml"
 
 string loopbackDevice = "/dev/video0";
+string cameraDevice = "/dev/video1";
 
 unsigned char * outBuffer;
 
@@ -104,6 +105,16 @@ void loadConfig()
 		outHeight = (int)configFile["outHeight"];
 	}
 
+	if(!configFile["camera_device"].empty())
+	{
+		cameraDevice = (string)configFile["camera_device"];
+	}
+
+	if(!configFile["loopback_device"].empty())
+	{
+		loopbackDevice = (string)configFile["loopback_device"];
+	}
+
 	bufferSize = outWidth * outHeight * BYTES_PER_PIXEL_OUT;
 
 	destinationPoints[0] = Point2f{0,0};
@@ -135,10 +146,12 @@ void loadConfig()
 
 void openCamera()
 {
+	logLine("Opening camera " + cameraDevice);
     int deviceID = 1;             // 0 = open default camera
-    int apiID = 0;      // 0 = autodetect default API
+    int apiID = CAP_V4L2;      // 0 = autodetect default API
     // open selected camera using selected API
-	cap.open(deviceID + apiID);
+	// cap.open(deviceID + apiID);
+	cap.open(cameraDevice);
 	
     // check if we succeeded
     if (!cap.isOpened()) {
