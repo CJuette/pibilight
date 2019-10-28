@@ -83,6 +83,7 @@ void logLine(string line)
 
 void loadConfig()
 {
+	logLine("Loading config file.");
 	FileStorage configFile(CONFIG_FILE, FileStorage::READ);
 
 	if(!configFile["width"].empty())
@@ -142,6 +143,8 @@ void loadConfig()
 	// cout << "Dist:" << distortionCoefficients << endl;
 	// cout << "CMat:" << cameraMatrix << endl;
 	// cout << "Points:" << tempSourcePoints << endl;
+
+	logLine("Successfully loaded config file.");
 }
 
 void openCamera()
@@ -162,8 +165,11 @@ void openCamera()
 
 void captureImage()
 {
+	logLine("Reading image.");
 	// wait for a new frame from camera and store it into 'frame'
 	cap.read(currentImage);
+	logLine("Got image.");
+
 	// check if we succeeded
 	if (currentImage.empty()) {
 		throw("ERROR! blank frame grabbed");
@@ -179,6 +185,7 @@ void captureImage()
 
 void initOutput()
 {
+	logLine("Initializing output device " + loopbackDevice);
 	outputFD = open(loopbackDevice.c_str(), O_WRONLY);
 	if (outputFD == -1)
 	{
@@ -253,6 +260,8 @@ void processImage()
 		// currentImage.copyTo(undistortedTemp);
 	// }
 
+	logLine("Processing image");
+
 	//Perspective Transformation
 	if(!perspTransform.empty())
 	{
@@ -268,7 +277,7 @@ void processImage()
 
 int main(int argc, char ** argv)
 {
-	// cout << "OpenCV version: " << CV_VERSION << endl;
+	logLine("OpenCV version: " + std::string(CV_VERSION));
 	try
 	{
 		//Load config file
@@ -281,6 +290,7 @@ int main(int argc, char ** argv)
 		initOutput();
 
 		//Perform the operation
+		logLine("Starting processing loop.");
 		while(true)
 		{
 			captureImage();	// The read inside this is blocking, so we don't need to sleep
