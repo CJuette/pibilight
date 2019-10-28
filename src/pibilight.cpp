@@ -283,7 +283,7 @@ int main(int argc, char ** argv)
 		//Perform the operation
 		while(true)
 		{
-			captureImage();
+			captureImage();	// The read inside this is blocking, so we don't need to sleep
 			// imwrite("image.png", currentImage);
 
 			processImage();
@@ -291,9 +291,6 @@ int main(int argc, char ** argv)
 
 			// currentImage.copyTo(processedImage);
 			outputImage();
-
-			//sleep(3000);
-			sleep(50);
 		}
 	}
 	catch(std::exception const& e) {
