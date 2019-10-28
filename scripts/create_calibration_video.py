@@ -9,6 +9,17 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
 from tqdm import tqdm
+from ruamel import yaml
+
+# =============================================================================
+# Globals...
+# =============================================================================
+
+_apriltag_template = ""
+_width = 0
+_height = 0
+_smallerdim = 0
+_display = False
 
 # =============================================================================
 # Some aux functions...
@@ -33,6 +44,24 @@ def add_version_text(img, color=(0,0,0)):
     return img
 
 # =============================================================================
+
+def add_tag_center(img, tagindex):
+    tag = ""
+    try:
+        tag = Image.open(_apriltag_template.format(tagindex))
+    except FileNotFoundError:
+        error("Could not open file %s. Please check that you supplied"
+        "the correct path to --tags." % _apriltag_template.format(i))    
+
+    tagsize = _smallerdim//3
+    tag = tag.resize((tagsize, tagsize), resample=Image.NEAREST, box=None)
+
+    img.paste(tag, box=(img.width//2-tagsize//2, img.height//2-tagsize//2))
+
+    return img
+
+
+# =============================================================================
 # Main Part
 # =============================================================================
 
@@ -41,7 +70,7 @@ parser = argparse.ArgumentParser(description='Generate a calibration video \
 parser.add_argument('--width', type=int, default=1920)
 parser.add_argument('--height', type=int, default=1080)
 parser.add_argument('--tags', type=str, help='Location of apriltag images \
-                    (family tagStandard41h12).', default='./apriltags/')
+                    (family tag36h11).', default='./apriltags/')
 parser.add_argument('--display', type=bool, default=False)
 args = parser.parse_args()
 
@@ -53,27 +82,63 @@ if _height < _smallerdim:
 
 _display = args.display
 
-_apriltag_template = args.tags + '/tag41_12_{:05d}.png'
+_apriltag_template = args.tags + '/tag36_11_{:05d}.png'
 
-images = []
+images = [] # List of images with tuples (img, duration); duration in seconds
+
+_tag_index = 0
 
 print("Generating images...")
 
+# ============================================================================
+# Black-White images for rough screen detection
+# ============================================================================
+
+img = Image.new(mode='RGB',size=(_width, _height), color=(127,127,127))
+img = add_tag_center(img, _tag_index)
+img = add_version_text(img)
+images.append((img,3))
+
+_tag_index = _tag_index + 1
+
+img = Image.new(mode='RGB',size=(_width, _height), color=(255,255,255))
+img = add_tag_center(img, _tag_index)
+img = add_version_text(img)
+images.append((img,3))
+
+_tag_index = _tag_index + 1
+
+img = Image.new(mode='RGB',size=(_width, _height), color=(0,0,0))
+img = add_tag_center(img, _tag_index)
+img = add_version_text(img)
+images.append((img,3))
+
+_tag_index = _tag_index + 1
+
+if _display:
+    img.show()
+
 # =============================================================================
-# First image: Apriltags around the screen for geometric calibration
+# Apriltags around the screen for geometric calibration
 # =============================================================================
 
 img = Image.new(mode='RGB',size=(_width, _height), color=(127,127,127))
 apriltags = []
-tagdims = (_smallerdim//5, _smallerdim//5)
+tagdims = (_smallerdim//4, _smallerdim//4)
+
+geomtags = []
 
 # Loading apriltags
-for i in range(9):
+for i in range(_tag_index, _tag_index+9):
     try:
         apriltags.append(Image.open(_apriltag_template.format(i)))
     except FileNotFoundError:
         error("Could not open file %s. Please check that you supplied the"
-              "correct path to --tags." % _apriltag_template.format(i))      
+              "correct path to --tags." % _apriltag_template.format(i))
+
+    geomtags.append(i)
+
+_tag_index = _tag_index + 9
 
 # Add tags to image
 for row in range(3):
@@ -87,17 +152,16 @@ for row in range(3):
 
 
 img = add_version_text(img)
-images.append(img)
+images.append((img,6))
 
 if _display:
     img.show()
 
 # =============================================================================
 # Colored images for color calibration. Tag in the middle with the 
-# corresponding index (starting from 9)
+# corresponding index (starting from current tag_index)
 # =============================================================================
 
-tag_index = 9
 # Generate for all combinations where each channel has either 0,127 or 255
 
 vals = [0,128,255]
@@ -110,26 +174,16 @@ for R in vals:
     for G in vals:
         for B in vals:
             color = (R,G,B)
-            colorlist.append((tag_index, color))
+
+            colorlist.append({'tag': _tag_index, 'color': color})
 
             img = Image.new(mode='RGB',size=(_width, _height), color=color)
 
-            tag = ""
-            try:
-                tag = Image.open(_apriltag_template.format(tag_index))
-            except FileNotFoundError:
-                error("Could not open file %s. Please check that you supplied"
-                "the correct path to --tags." % _apriltag_template.format(i))    
-
-            tagsize = _smallerdim//3
-            tag = tag.resize((tagsize, tagsize), 
-                              resample=Image.NEAREST, box=None)
-            
-            img.paste(tag, box=(_width//2-tagsize//2, _height//2-tagsize//2))
+            img = add_tag_center(img, _tag_index)
             img = add_version_text(img)
-            images.append(img)
+            images.append((img,3))
 
-            tag_index = tag_index + 1
+            _tag_index = _tag_index + 1
 
             if _display:
                 img.show()
@@ -138,21 +192,18 @@ for R in vals:
 
 # print(colorlist)
 
-# TODO: Output colorlist?
+with open('calib_video_data.yml', 'w') as f:
+    data = yaml.dump({'geometry': geomtags, 'colorlist': colorlist}, f, 
+                        default_flow_style=None)
 
 print("Writing images to video...")
 
 framerate = 20.0
-frame_duration = 3 # second
 _fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 _out = cv2.VideoWriter("pibilight_calib.mp4", _fourcc, framerate, (_width,_height))
 
-# Double duration for first image
-for i in range(int(framerate * frame_duration)):
-    _out.write(np.array(images[0]))
-
-for img in tqdm(images):
-    for i in range(int(framerate * frame_duration)):
-        _out.write(np.array(img))
+for imgtup in tqdm(images):
+    for i in range(int(framerate * imgtup[1])):
+        _out.write(np.array(imgtup[0]))
 
 _out.release()
