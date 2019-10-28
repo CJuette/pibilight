@@ -26,6 +26,7 @@ string logFileName;
 
 // Commandline options
 bool verbose = false;
+bool display = false;
 bool noLoopback = false;
 string configFilePath = "/home/pi/pibilight/config.yml";
 
@@ -325,9 +326,20 @@ int main(int argc, char ** argv)
 		{
 			captureImage();	// The read inside this is blocking, so we don't need to sleep
 			// imwrite("image.png", currentImage);
+			if(display)
+			{
+				imshow("Camera Image", currentImage);
+				waitKey(1);
+			}
 
 			processImage();
 			// imwrite("processed.png", processedImage);
+			if(display)
+			{
+				imshow("Processed Image", processedImage);
+				waitKey(1);
+			}
+
 			if(!noLoopback)
 			{	
 				outputImage();
