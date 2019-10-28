@@ -1,5 +1,6 @@
 #include "pibilight.h"
 #include "ext/CLI11.hpp"
+#include "ext/loguru.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/videoio.hpp>
@@ -31,7 +32,6 @@ bool noLoopback = false;
 string configFilePath = "/home/pi/pibilight/config.yml";
 
 // Config-File options
-bool logCreated = false;
 int cameraFD;
 int outputFD;
 int width = 720;
@@ -62,41 +62,17 @@ Point2f destinationPoints[4];
 
 Mat perspTransform;
 
-bool createLogFile()
+// =====================================================================================================================
+
+void loadConfig()
 {
-	time_t currentTime = time(nullptr);
-	char timeStr[100];
-	strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H-%M", localtime(&currentTime));
-	logFileName = timeStr;
-	logFileName.append(".log");
-
-	ofstream outfile(logFilePrefix + logFileName);
-	outfile << "Log created on " << string(timeStr) << endl << flush;
-	outfile.close();
-
-	return true;
-}
-
-void logLine(string line)
-{
-	if(!logCreated)
+	LOG_F(INFO, "Loading config file.");
 	FileStorage configFile;
 	if(!configFile.open(configFilePath, FileStorage::READ))
 	{
 		throw("Could not open the config file. Please supply a valid path using -c.");
 	}
 
-	ofstream file;
-	file.open(logFilePrefix+logFileName, ios_base::app);
-	file << line << endl;
-	file.close();
-
-	cout << line << endl;
-}
-
-void loadConfig()
-{
-	logLine("Loading config file.");
 	if(!configFile["width"].empty())
 	{
 		width = (int)configFile["width"];
@@ -155,12 +131,14 @@ void loadConfig()
 	// cout << "CMat:" << cameraMatrix << endl;
 	// cout << "Points:" << tempSourcePoints << endl;
 
-	logLine("Successfully loaded config file.");
+	LOG_F(INFO, "Successfully loaded config file.");
 }
+
+// =====================================================================================================================
 
 void openCamera()
 {
-	logLine("Opening camera " + cameraDevice);
+	LOG_F(INFO, "Opening camera %s", cameraDevice.c_str());
     int deviceID = 1;             // 0 = open default camera
     int apiID = CAP_V4L2;      // 0 = autodetect default API
     // open selected camera using selected API
@@ -174,12 +152,14 @@ void openCamera()
     }
 }
 
+// =====================================================================================================================
+
 void captureImage()
 {
-	logLine("Reading image.");
+	LOG_F(2, "Reading image.");
 	// wait for a new frame from camera and store it into 'frame'
 	cap.read(currentImage);
-	logLine("Got image.");
+	LOG_F(2, "Got image.");
 
 	// check if we succeeded
 	if (currentImage.empty()) {
@@ -194,9 +174,11 @@ void captureImage()
     return;
 }
 
+// =====================================================================================================================
+
 void initOutput()
 {
-	logLine("Initializing output device " + loopbackDevice);
+	LOG_F(INFO, "Initializing output device %s", loopbackDevice.c_str());
 	outputFD = open(loopbackDevice.c_str(), O_WRONLY);
 	if (outputFD == -1)
 	{
@@ -240,6 +222,8 @@ void initOutput()
 	memset(outBuffer, 0, bufferSize);
 }
 
+// =====================================================================================================================
+
 void outputImage()
 {
 	//Convert to RGBA
@@ -251,13 +235,15 @@ void outputImage()
 
 	cvtColor(processedImage, rgbaImg, CV_BGR2RGBA);
 
-	logLine("Writing to output");
+	LOG_F(2, "Writing to output");
 	if(write(outputFD, rgbaImg.ptr(), bufferSize) <= 0)
 	{
 		throw("Write to output failed");
 		return;
 	}
 }
+
+// =====================================================================================================================
 
 void processImage()
 {
@@ -271,7 +257,7 @@ void processImage()
 		// currentImage.copyTo(undistortedTemp);
 	// }
 
-	logLine("Processing image");
+	LOG_F(2, "Processing image");
 
 	//Perspective Transformation
 	if(!perspTransform.empty())
@@ -305,7 +291,29 @@ int main(int argc, char ** argv)
 	CLI::App app{"Pibilight."};
 	addCommandlineOptions(app);
 	CLI11_PARSE(app, argc, argv);
-	logLine("OpenCV version: " + std::string(CV_VERSION));
+
+	if(app.get_option_no_throw("-l,--log-dir") != nullptr)
+	{
+		// Name of logfile depends on execution time
+		time_t currentTime = time(nullptr);
+		char timeStr[100];
+		strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H-%M", localtime(&currentTime));
+		logFileName = timeStr;
+		logFileName.append(".log");
+
+		loguru::add_file(std::string(logFilePrefix+logFileName).c_str(), loguru::Append, loguru::Verbosity_MAX);
+	}
+
+	if(verbose)
+	{
+		loguru::g_stderr_verbosity = 9;
+	}
+	else
+	{
+		loguru::g_stderr_verbosity = -1;
+	}
+	
+	LOG_F(INFO, "OpenCV version: %s", CV_VERSION);
 	try
 	{
 		//Load config file
@@ -321,7 +329,7 @@ int main(int argc, char ** argv)
 		}
 
 		//Perform the operation
-		logLine("Starting processing loop.");
+		LOG_F(INFO, "Starting processing loop.");
 		while(true)
 		{
 			captureImage();	// The read inside this is blocking, so we don't need to sleep
@@ -347,18 +355,18 @@ int main(int argc, char ** argv)
 		}
 	}
 	catch(std::exception const& e) {
-		logLine(e.what());
+		LOG_F(FATAL, e.what());
 	}
 	catch(std::string & e)
 	{
-		logLine(e);
+		LOG_F(FATAL, e.c_str());
 	}
 	catch(const char * e)
 	{
-		logLine(std::string(e));
+		LOG_F(FATAL, e);
 	}
 	catch(...) {
-		logLine("Exception occurred");
+		LOG_F(FATAL, "Exception occurred");
 	}
 	return 0;
 }
