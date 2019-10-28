@@ -1,7 +1,7 @@
 #!/bin/bash
 DST=./apriltags/
-TAGFAMILY="tagStandard41h12"
-TAGPREFIX="tag41_12_"
+TAGFAMILY="tag36h11"
+TAGPREFIX="tag36_11_"
 
 mkdir -p $DST
 
