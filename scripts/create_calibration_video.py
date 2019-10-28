@@ -9,7 +9,6 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import cv2
 from tqdm import tqdm
-from ruamel import yaml
 
 # =============================================================================
 # Some aux functions...
@@ -111,8 +110,7 @@ for R in vals:
     for G in vals:
         for B in vals:
             color = (R,G,B)
-
-            colorlist.append({'tag': tag_index, 'color': color})
+            colorlist.append((tag_index, color))
 
             img = Image.new(mode='RGB',size=(_width, _height), color=color)
 
@@ -140,8 +138,7 @@ for R in vals:
 
 # print(colorlist)
 
-with open('calib_video_data.yml', 'w') as f:
-    data = yaml.dump(colorlist, f, default_flow_style=None)
+# TODO: Output colorlist?
 
 print("Writing images to video...")
 
