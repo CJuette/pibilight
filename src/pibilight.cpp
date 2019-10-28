@@ -1,5 +1,5 @@
 #include "pibilight.h"
-//#include "yaml-cpp/yaml.h"
+#include "ext/CLI11.hpp"
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/videoio.hpp>
@@ -17,8 +17,19 @@
 using namespace std;
 using namespace cv;
 
+// =====================================================================================================================
+// GLOBALS
+// =====================================================================================================================
+
 string logFilePrefix = "/home/pi/pibilight/log/";
 string logFileName;
+
+// Commandline options
+bool verbose = false;
+bool noLoopback = false;
+string configFilePath = "/home/pi/pibilight/config.yml";
+
+// Config-File options
 bool logCreated = false;
 int cameraFD;
 int outputFD;
@@ -29,11 +40,10 @@ int outHeight = 360;
 constexpr int BYTES_PER_PIXEL_OUT = 4;
 size_t bufferSize = outWidth * outHeight * BYTES_PER_PIXEL_OUT;
 
-#define CONFIG_FILE "/home/pi/pibilight/config.yml"
-
 string loopbackDevice = "/dev/video0";
 string cameraDevice = "/dev/video1";
 
+// Other globals
 unsigned char * outBuffer;
 
 VideoCapture cap;
@@ -69,8 +79,10 @@ bool createLogFile()
 void logLine(string line)
 {
 	if(!logCreated)
+	FileStorage configFile;
+	if(!configFile.open(configFilePath, FileStorage::READ))
 	{
-		logCreated = createLogFile();
+		throw("Could not open the config file. Please supply a valid path using -c.");
 	}
 
 	ofstream file;
@@ -84,8 +96,6 @@ void logLine(string line)
 void loadConfig()
 {
 	logLine("Loading config file.");
-	FileStorage configFile(CONFIG_FILE, FileStorage::READ);
-
 	if(!configFile["width"].empty())
 	{
 		width = (int)configFile["width"];
@@ -275,8 +285,25 @@ void processImage()
 	}
 }
 
+// =====================================================================================================================
+
+void addCommandlineOptions(CLI::App & app)
+{
+	app.add_flag("-d,--display", display, "Display images (if the system has a GUI");
+	app.add_flag("--no-loopback", noLoopback, "Disable outputting to loopback device");
+	app.add_option("-c,--config", configFilePath, "Path to the config-yml-file");
+	app.add_option("-l,--log-dir", logFilePrefix, "Directory where logfiles are stored");
+
+	app.add_flag("-v,--verbose", verbose, "Show more in stdout-log-output");
+}
+
+// =====================================================================================================================
+
 int main(int argc, char ** argv)
 {
+	CLI::App app{"Pibilight."};
+	addCommandlineOptions(app);
+	CLI11_PARSE(app, argc, argv);
 	logLine("OpenCV version: " + std::string(CV_VERSION));
 	try
 	{
@@ -286,8 +313,11 @@ int main(int argc, char ** argv)
 		//Open V4L2-capture device
 		openCamera();
 
-		//Open output V4L2-Device
-		initOutput();
+		if(!noLoopback)
+		{
+			//Open output V4L2-Device
+			initOutput();
+		}
 
 		//Perform the operation
 		logLine("Starting processing loop.");
@@ -298,9 +328,10 @@ int main(int argc, char ** argv)
 
 			processImage();
 			// imwrite("processed.png", processedImage);
-
-			// currentImage.copyTo(processedImage);
-			outputImage();
+			if(!noLoopback)
+			{	
+				outputImage();
+			}
 		}
 	}
 	catch(std::exception const& e) {
