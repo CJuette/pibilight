@@ -27,9 +27,11 @@ To build the software, the following dependencies need to be satisfied. For each
 Then building should be fairly straightforward. In the main directory:
 
     mkdir build
-    make all
+    cd build
+    cmake ..
+    cmake --build .
 
-This should build a pibilight-executable in the main directory.
+This should build a pibilight-executable in the build directory.
 
 ### How to run as a service
 
