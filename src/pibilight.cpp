@@ -310,7 +310,7 @@ int main(int argc, char ** argv)
 	}
 	else
 	{
-		loguru::g_stderr_verbosity = -1;
+		loguru::g_stderr_verbosity = 0;
 	}
 	
 	LOG_F(INFO, "OpenCV version: %s", CV_VERSION);
