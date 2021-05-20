@@ -66,7 +66,7 @@ Mat perspTransform;
 
 void loadConfig()
 {
-	LOG_F(INFO, "Loading config file.");
+	LOG_F(INFO, "Loading config file from %s.", configFilePath.c_str());
 	FileStorage configFile;
 	if(!configFile.open(configFilePath, FileStorage::READ))
 	{
