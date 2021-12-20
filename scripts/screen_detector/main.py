@@ -187,7 +187,7 @@ def create_coco_dataset(set: str, min_area_percentage: float = 0.0):
 
     return dataset
 
-def get_padding_height_width(height, width, target_height, target_width):
+def get_padding_params(height, width, target_height, target_width):
     # convert values to float, to ease divisions
     f_height = tf.cast(height, dtype=tf.float32)
     f_width = tf.cast(width, dtype=tf.float32)
@@ -211,7 +211,7 @@ def get_padding_height_width(height, width, target_height, target_width):
     p_height = tf.maximum(0, tf.cast(f_padding_height, dtype=tf.int32))
     p_width = tf.maximum(0, tf.cast(f_padding_width, dtype=tf.int32))
 
-    return p_height, p_width
+    return resized_height, resized_width, p_height, p_width
 
 def make_loading_and_heatmap_generation_function(target_width, target_height, sigma=tf.Variable):
     def load_img_and_make_heatmaps(filename, corners):
@@ -221,37 +221,39 @@ def make_loading_and_heatmap_generation_function(target_width, target_height, si
 
         image_shape = tf.shape(image)
 
-        # Create a new tensor based on the image dimensions
-        heatmaps = tf.zeros(shape=(image_shape[0:2]))
-        heatmaps = tf.expand_dims(heatmaps, axis=2)
-        heatmaps = tf.repeat(heatmaps, 4, axis=2)
+        # Get padding offsets
+        resized_height, resized_width, padding_y, padding_x = get_padding_params(image_shape[0], image_shape[1], target_height, target_width)
 
         # Add slice index to corners
         corners = tf.reverse(corners, axis=[1])
+        corners = tf.cast(corners, tf.float32)
+
+        # Adjust corner coordinates
+        corners_y = tf.cast(corners[:,0] * tf.cast((resized_height / image_shape[0]), tf.float32) + tf.cast(padding_y, tf.float32), tf.int32)
+        corners_x = tf.cast(corners[:,1] * tf.cast((resized_width / image_shape[1]), tf.float32) + tf.cast(padding_x, tf.float32), tf.int32)
+
         corner_slice_indices = tf.constant([0,1,2,3])
         corner_slice_indices = tf.expand_dims(corner_slice_indices, axis=1)
-        corners = tf.concat([corner_slice_indices, corners], axis=1)
+        corners = tf.stack([corners_y, corners_x], axis=1)
         # corners = tf.expand_dims(corners, axis=0)
 
-        # Put 1s on the heatmaps
-        updates = tf.constant([1,1,1,1], dtype=tf.float32)
-        heatmaps = tf.tensor_scatter_nd_add(heatmaps, corners, updates)
+        def create_heatmap(corner):
+            # Make heatmap indices
+            heatmap_y = tf.range(0, target_height)
+            heatmap_x = tf.range(0, target_width)
 
-        # Filter the ones a bit and scale them again so they don't get lost when scaling
-        heatmaps = gaussian_filter2d(image=heatmaps, filter_shape=(9,9), sigma=3)
-        heatmaps = heatmaps / tf.reduce_max(heatmaps)
+            heatmap_indices = tf.meshgrid(heatmap_y, heatmap_x, indexing='ij')
+            heatmap_indices = tf.stack(heatmap_indices, axis=2)
 
-        threshold = tf.ones(tf.shape(heatmaps))
-        threshold = threshold * tf.constant(0.5)
-        cond = tf.less(heatmaps, threshold)
-        heatmaps = tf.where(cond, tf.zeros(tf.shape(heatmaps)), tf.ones(tf.shape(heatmaps)))
+            sub = heatmap_indices - corner
+            d = tf.norm(tf.cast(sub, tf.float32), axis=2) ** 2
+            heatmap = tf.exp(- d / (tf.cast(sigma, tf.float32)**2))
 
-        heatmaps = tf.image.resize_with_pad(heatmaps, target_height, target_width)
+            return heatmap
 
-        gauss_size = sigma*8
-        gauss_size = gauss_size + (1-(gauss_size % 2))
+        heatmaps = tf.map_fn(create_heatmap, corners, fn_output_signature=tf.TensorSpec(shape=(target_height, target_width), dtype=tf.float32))
 
-        heatmaps = gaussian_filter2d(image=heatmaps, filter_shape=(gauss_size, gauss_size), sigma=sigma)
+        heatmaps = tf.stack(tf.unstack(heatmaps, axis=0), axis=2)
         heatmaps = heatmaps / tf.reduce_max(heatmaps)
 
         image = tf.image.resize_with_pad(image, target_height, target_width)
