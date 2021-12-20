@@ -35,7 +35,7 @@ def error(description):
 def add_version_text(img, color=(0,0,0)):
     msg = "Pibilight Autocalibration v0.1"
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype('Pillow/Tests/fonts/FreeMono.ttf', 20)
+    font = ImageFont.truetype('arial.ttf', 20)
     tw, _ = draw.textsize(msg, font=font)
 
     draw.text((img.width//2-tw//2,img.height//2-img.height//4), msg, font=font,
@@ -51,7 +51,7 @@ def add_tag_center(img, tagindex):
         tag = Image.open(_apriltag_template.format(tagindex))
     except FileNotFoundError:
         error("Could not open file %s. Please check that you supplied"
-        "the correct path to --tags." % _apriltag_template.format(i))    
+        "the correct path to --tags." % _apriltag_template.format(tagindex))    
 
     tagsize = _smallerdim//3
     tag = tag.resize((tagsize, tagsize), resample=Image.NEAREST, box=None)
@@ -164,7 +164,7 @@ if _display:
 
 # Generate for all combinations where each channel has either 0,127 or 255
 
-vals = [0,128,255]
+vals = [0,127,255]
 colorlist = []
 
 progress = tqdm(total=len(vals)**3)
